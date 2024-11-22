@@ -1,0 +1,92 @@
+/* General Navbar Styling */
+.navbar {
+    background-color: #333;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);  /* Adding slight shadow for a clean look */
+  }
+  
+  /* Navbar Links and Items */
+  .navbar ul {
+    display: flex;
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  /* Styling the list items */
+  .navbar li {
+    margin: 0 20px;
+    font-size: 16px;
+  }
+  
+  /* User info container */
+  .user-info {
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Profile photo and name container */
+  .user-profile {
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Profile photo styling */
+  .profile-photo {
+    margin-right: 10px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+  }
+  
+  /* User's full name styling */
+  .user-name {
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+  }
+  
+  /* Button styling */
+  button {
+    background-color: #f44336;
+    color: #fff;
+    padding: 8px 15px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 5px;  /* Added rounded corners */
+    transition: background-color 0.3s ease;  /* Smooth transition effect */
+  }
+  
+  /* Button hover effect */
+  button:hover {
+    background-color: #d32f2f;
+  }
+  
+  /* Responsive design for small screens (mobile) */
+  @media (max-width: 768px) {
+    .navbar {
+      flex-direction: column;  /* Stack items vertically */
+      align-items: flex-start;
+    }
+  
+    .navbar ul {
+      flex-direction: column;
+      width: 100%;
+      padding: 10px 0;
+    }
+  
+    .navbar li {
+      margin: 10px 0;  /* Increase margin for spacing on mobile */
+      font-size: 18px;  /* Larger text for readability */
+    }
+  
+    .user-info {
+      margin-top: 15px;  /* Add spacing between navbar items and profile info */
+    }
+  }
+  

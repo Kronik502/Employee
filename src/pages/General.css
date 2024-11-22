@@ -1,0 +1,69 @@
+/* Overall container for the dashboard */
+.generaladmin-dashboard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;  /* Make the dashboard take up the full screen height */
+    background: #f4f4f9;  /* Light background color */
+    font-family: 'Arial', sans-serif;  /* Choose a modern font */
+    text-align: center;
+    padding: 20px;
+  }
+  
+  /* Dashboard Title Styling */
+  .dashboard-title {
+    font-size: 2.5rem;
+    color: #333;
+    margin-bottom: 30px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  /* Container for buttons to center them nicely */
+  .dashboard-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+  
+  /* Styling for the button */
+  .btn-employee {
+    background-color: #ff5733;  /* Vibrant eye-catching color */
+    color: white;
+    font-size: 1.5rem;
+    padding: 20px 40px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Hover effects for the button */
+  .btn-employee:hover {
+    background-color: #e74c3c;  /* Slightly darker shade for hover effect */
+    transform: scale(1.05);  /* Slightly enlarge the button when hovered */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  }
+  
+  /* Focused state for accessibility */
+  .btn-employee:focus {
+    outline: none;
+    border: 2px solid #f39c12;  /* Add a golden outline for focus state */
+  }
+  
+  @media (max-width: 768px) {
+    /* Mobile styling for better responsiveness */
+    .dashboard-title {
+      font-size: 2rem;  /* Smaller title font on mobile */
+    }
+  
+    .btn-employee {
+      font-size: 1.2rem;
+      padding: 15px 30px;
+    }
+  }
+  

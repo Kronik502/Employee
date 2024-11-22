@@ -1,286 +1,242 @@
-// App.js
-
+// src/App.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import TextBox from './Textbox';
-import './App.css';
+import './App.css'; // Include your custom styles here
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Navbar from './navbar'; // Import the Navbar component
+import AssignRole from './pages/AssignRole';
+import GeneralAdminDashboard from './pages/GeneralAdminDashboard';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import Login from './auth/Login';
+
 
 function App() {
+  // Your existing code for formData, employees, modal visibility, etc.
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     position: '',
-    id: '',
-    photo: null
+    saId: '',  // South African ID
+    photo: null, // Base64 string for the photo
   });
-
   const [employees, setEmployees] = useState([]);
-  const [editingIndex, setEditingIndex] = useState(-1);
-  const [submitted, setSubmitted] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [fetchError, setFetchError] = useState(null);
-  const [confirmRemove, setConfirmRemove] = useState(false);
-  const [removeIndex, setRemoveIndex] = useState(-1);
+  const [editingIndex, setEditingIndex] = useState(null); // To track if we're editing an existing employee
+  const [showModal, setShowModal] = useState(false); // Modal visibility state
 
+  // Fetch employees from the backend
+  const fetchEmployees = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/employees');
+      setEmployees(response.data); // Populate employee data
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  // Fetch employees when the component mounts
   useEffect(() => {
     fetchEmployees();
   }, []);
 
-  const fetchEmployees = async () => {
-    try {
-      const response = await axios.get('http://localhost:3002/employees');
-      setEmployees(response.data);
-      setFetchError(null);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      setFetchError(error.message || 'Error fetching employees');
-    }
+  // Handle form field changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
+  // Handle image upload and convert to Base64 string
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData({
-          ...formData,
-          photo: reader.result
-        });
+        setFormData({ ...formData, photo: reader.result }); // Save Base64 string of the photo
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(file); // Converts the file to a Base64 string
     }
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  // Validate the South African 13-digit ID
+  const validateSAId = (id) => {
+    const idPattern = /^\d{13}$/; // Regex to ensure it's exactly 13 digits
+    return idPattern.test(id);
+  };
 
-    if (!formData.name || !formData.email || !formData.phone || !formData.position) {
-      alert('Please fill out all required fields.');
+  // Handle form submission (Add or Edit employee)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const { name, email, phone, position, saId, photo } = formData;
+
+    // Validate all required fields, including 13-digit South African ID
+    if (!name || !email || !phone || !position || !saId || !photo || !validateSAId(saId)) {
+      alert('Please fill out all fields and ensure the SA ID is 13 digits long');
       return;
     }
 
-    if (formData.email.indexOf('@') === -1 || formData.email.indexOf('.') === -1) {
-      alert('Please enter a valid email address.');
-      return;
-    }
-
-    if (editingIndex !== -1) {
-      const updatedEmployees = [...employees];
-      updatedEmployees[editingIndex] = formData;
-      setEmployees(updatedEmployees);
-      setEditingIndex(-1);
-    } else {
-      try {
-        await axios.post('http://localhost:3002/employees', formData);
-        fetchEmployees();
-      } catch (error) {
-        console.error('Error adding employee:', error);
-      }
-    }
-
-    setSubmitted(true);
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      position: '',
-      id: '',
-      photo: null
-    });
-  };
-
-  const handleEdit = (index) => {
-    setFormData(employees[index]);
-    setEditingIndex(index);
-    setSubmitted(false);
-  };
-
-  const handleRemove = (index) => {
-    setConfirmRemove(true);
-    setRemoveIndex(index);
-  };
-
-  const confirmRemoveEmployee = async () => {
-    if (removeIndex !== -1) {
-      try {
-        const employeeId = employees[removeIndex].id;
-        await axios.delete(`http://localhost:3002/employees/${employeeId}`);
-        const updatedEmployees = employees.filter((_, index) => index !== removeIndex);
-        setEmployees(updatedEmployees);
-      } catch (error) {
-        console.error('Error removing employee:', error);
-      } finally {
-        setConfirmRemove(false);
-        setRemoveIndex(-1);
-      }
-    }
-  };
-
-  const cancelRemoveEmployee = () => {
-    setConfirmRemove(false);
-    setRemoveIndex(-1);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingIndex(-1);
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      position: '',
-      id: '',
-      photo: null
-    });
-  };
-
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-  };
-
-  const handleSearch = () => {
-    const results = employees.filter(employee =>
-      employee.id.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setSearchResults(results);
-  };
-
-  const handleViewAllEmployees = async () => {
     try {
-      const response = await axios.get('http://localhost:3002/employees');
-      setEmployees(response.data);
-      setSearchTerm('');
-      setSearchResults([]);
-      setFetchError(null);
+      const payload = { name, email, phone, position, saId, photo };
+      
+
+      if (editingIndex !== null) {
+        // Update existing employee
+        await axios.put(`http://localhost:5000/api/employee/${employees[editingIndex]?.id}`, payload);
+      } else {
+        // Add new employee to Firestore (ID will be auto-generated by Firestore)
+        await axios.post('http://localhost:5000/api/employee', payload);
+      }
+
+      // After successful submission, close modal and reset form
+      setShowModal(false); // Close modal after submission
+      setFormData({ name: '', email: '', phone: '', position: '', saId: '', photo: null }); // Reset form
+      fetchEmployees(); // Refresh the employee list
     } catch (error) {
-      console.error('Error fetching all employees:', error);
-      setFetchError(error.message || 'Error fetching all employees');
+      console.error('Error saving employee data:', error);
     }
   };
 
-  if (submitted) {
-    return (
-      <div className="success-container">
-        <h2>Submitted successfully!</h2>
-        {employees.map((employee, index) => (
-          <div key={index} className="employee-item">
-            {employee.photo && (
-              <div className="photo-preview">
-                <img src={employee.photo} alt="Uploaded" />
-              </div>
-            )}
-            <p><strong>Names:</strong> {employee.name}</p>
-            <p><strong>Email:</strong> {employee.email}</p>
-            <p><strong>Phone Number:</strong> {employee.phone}</p>
-            <p><strong>Position:</strong> {employee.position}</p>
-            <p><strong>ID Number:</strong> {employee.id}</p>
-            <div>
-              <button className="edit-button" onClick={() => handleEdit(index)}>Edit</button>
-    
-            </div>
-          </div>
-        ))}
-        <button className="next-button" onClick={() => setSubmitted(false)}>Add Another Employee</button>
-      </div>
-    );
-  }
+  // Open the edit form for the selected employee
+  const handleEdit = (index) => {
+    setFormData({ ...employees[index] }); // Pre-fill form with employee data
+    setEditingIndex(index); // Set editing state
+    setShowModal(true); // Show the modal
+  };
+
+  // Delete an employee
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/employee/${id}`);
+      fetchEmployees(); // Refresh employee list after deletion
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+    }
+  };
+
+  // Close the modal and reset form
+  const handleModalClose = () => {
+    setFormData({ name: '', email: '', phone: '', position: '', saId: '', photo: null });
+    setEditingIndex(null);
+    setShowModal(false); // Close the modal
+  };
 
   return (
-    <div className="App">
-      <h1>Employee Details</h1>
-      <TextBox
-        formData={formData}
-        handleChange={handleChange}
-        handleFileChange={handleFileChange}
-        handleSubmit={handleSubmit}
-        handleCancelEdit={handleCancelEdit}
-        editingIndex={editingIndex}
-      />
+    <Router>
+      <div className="App">
+        {/* Navbar Component */}
+        <Navbar />
 
-      <div className="actions-container">
-        <button className="view-all-button" onClick={handleViewAllEmployees}>View All Employees</button>
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder="Search by ID..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
-          <button className="search-button" onClick={handleSearch}>Search</button>
-        </div>
-      </div>
+        <Routes>
+          <Route path="/admin/dashboard" element={<GeneralAdminDashboard />} />
+          <Route path="/assign-admin" element={<AssignRole />} />
+          <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
+          <Route path="/employees" element={
+            <>
+              <h1 className="title">Employee Management</h1>
+              <button onClick={() => setShowModal(true)} className="add-button">
+                Add Employee
+              </button>
 
-      {fetchError && <p className="error-message">{fetchError}</p>}
-
-      <div className="search-results">
-        {searchResults.length > 0 && (
-          <div>
-            <h2>Search Results</h2>
-            {searchResults.map((result, index) => (
-              <div key={index} className="employee-item">
-                {result.photo && (
-                  <div className="photo-preview">
-                    <img src={result.photo} alt="Uploaded" />
+              {/* Modal for adding or editing employee */}
+              {showModal && (
+                <div className="modal">
+                  <div className="modal-content">
+                    <h2>{editingIndex !== null ? 'Edit Employee' : 'Add Employee'}</h2>
+                    <form onSubmit={handleSubmit}>
+                      <input
+                        type="text"
+                        name="saId"
+                        placeholder="South African ID (13 digits)"
+                        value={formData.saId}
+                        onChange={handleChange}
+                        maxLength="13" // Limit to 13 characters
+                        required
+                      />
+                      <input
+                        type="text"
+                        name="name"
+                        placeholder="Name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        required
+                      />
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder="Email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                      />
+                      <input
+                        type="text"
+                        name="phone"
+                        placeholder="Phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        required
+                      />
+                      <input
+                        type="text"
+                        name="position"
+                        placeholder="Position"
+                        value={formData.position}
+                        onChange={handleChange}
+                        required
+                      />
+                      <input
+                        type="file"
+                        name="photo"
+                        onChange={handleImageChange}
+                        required={!formData.photo} // Only require photo if not already selected
+                      />
+                      {formData.photo && <img src={formData.photo} alt="Preview" className="image-preview" />} {/* Photo preview */}
+                      <div className="modal-buttons">
+                        <button type="submit">
+                          {editingIndex !== null ? 'Update' : 'Add'} Employee
+                        </button>
+                        <button type="button" onClick={handleModalClose}>Cancel</button>
+                      </div>
+                    </form>
                   </div>
-                )}
-                <p><strong>Names:</strong> {result.name}</p>
-                <p><strong>Email:</strong> {result.email}</p>
-                <p><strong>Phone Number:</strong> {result.phone}</p>
-                <p><strong>Position:</strong> {result.position}</p>
-                <p><strong>ID Number:</strong> {result.id}</p>
-                <div>
-                  <button className="edit-button" onClick={() => handleEdit(index)}>Edit</button>
-           
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              )}
 
-      <div className="all-employees">
-        <h2>All Employees</h2>
-        {employees.map((employee, index) => (
-          <div key={index} className="employee-item">
-            {employee.photo && (
-              <div className="photo-preview">
-                <img src={employee.photo} alt="Uploaded" />
+              {/* Employee list */}
+              <h2 className="employee-list-title">Employees</h2>
+              <div className="employee-list">
+                {/* Only render employees if there is data */}
+                {employees.length > 0 ? (
+                  employees.map((employee, index) => (
+                    <div key={employee.id} className="employee-item">
+                      <div className="employee-photo">
+                        {employee.photo ? (
+                          <img src={employee.photo} alt="Employee" className="employee-photo-img" />
+                        ) : (
+                          <div className="no-photo">No Photo</div>
+                        )}
+                      </div>
+                      <div className="employee-details">
+                        <p><strong>Name:</strong> {employee.name}</p>
+                        <p><strong>Email:</strong> {employee.email}</p>
+                        <p><strong>Phone:</strong> {employee.phone}</p>
+                        <p><strong>Position:</strong> {employee.position}</p>
+                      </div>
+                      <div className="employee-actions">
+                        <button onClick={() => handleEdit(index)} className="edit-button">Edit</button>
+                        <button onClick={() => handleDelete(employee.id)} className="delete-button">Delete</button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p>No employees found</p>
+                )}
               </div>
-            )}
-            <p><strong>Names:</strong> {employee.name}</p>
-            <p><strong>Email:</strong> {employee.email}</p>
-            <p><strong>Phone Number:</strong> {employee.phone}</p>
-            <p><strong>Position:</strong> {employee.position}</p>
-            <p><strong>ID Number:</strong> {employee.id}</p>
-            <div>
-              <button className="edit-button" onClick={() => handleEdit(index)}>Edit</button>
-              <button className="remove-button" onClick={() => handleRemove(index)}>Remove</button>
-            </div>
-          </div>
-        ))}
+            </>
+          } />
+          <Route path="/login" element={<Login />} />
+        </Routes>
       </div>
-
-      {confirmRemove && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>Are you sure you want to remove this employee?</h3>
-            <div className="modal-buttons">
-              <button onClick={confirmRemoveEmployee}>Yes</button>
-              <button onClick={cancelRemoveEmployee}>No</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </Router>
   );
 }
 
