@@ -7,6 +7,7 @@ import Navbar from './navbar'; // Import the Navbar component
 import AssignRole from './pages/AssignRole';
 import GeneralAdminDashboard from './pages/GeneralAdminDashboard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import Profile from './pages/Profile';
 import Login from './auth/Login';
 
 
@@ -126,6 +127,7 @@ function App() {
         <Navbar />
 
         <Routes>
+          <Route path='/profile' element={<Profile/>}/> 
           <Route path="/admin/dashboard" element={<GeneralAdminDashboard />} />
           <Route path="/assign-admin" element={<AssignRole />} />
           <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />

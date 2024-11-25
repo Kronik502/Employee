@@ -140,34 +140,103 @@ app.delete('/api/employee/:id', async (req, res) => {
 });
 
 // 6. Assign General Admin Role (only accessible by super admin)
+// POST - Assign General Admin Role (Create)
 app.post('/api/assign-general-admin', async (req, res) => {
-  const { email, name, surname, age, idNumber, photo, role } = req.body;
-
-  if (!email || !name || !surname || !age || !idNumber || !photo) {
-    return res.status(400).json({ message: 'All fields are required' });
-  }
+  const { email, name, surname, age, idNumber, photo, role, password } = req.body;
 
   try {
+    // Create user in Firebase Authentication
+    const user = await admin.auth().createUser({
+      email,
+      password,
+      displayName: name,
+    });
 
-    console.log('bas');
-    
+    // Store user data in Firestore (or any other database)
+    const newAdminData = {
+      name,
+      surname,
+      age: parseInt(age, 10),
+      idNumber,
+      photo,
+      role,
+      userID: user.uid,
+    };
 
-    // const userRecord = await admin.auth().getUserByEmail(email);
-    // console.log(userRecord);
-    
-    // const userDoc = await db.collection('users').doc(userRecord.uid).get();
+    await db.collection('users').doc(user.uid).set(newAdminData);
 
-    // if (!userDoc.exists) {
-    //   return res.status(404).json({ message: 'User not found' });
-    // }
-
-    // await db.collection('users').doc(userRecord.uid).update({ role: 'sysadmin' });
     res.status(201).json({ message: 'General admin role assigned successfully' });
   } catch (error) {
     console.error('Error assigning admin role:', error);
     res.status(500).json({ message: 'Error assigning admin role' });
   }
 });
+// GET - Get User Profile by User ID (Read)
+app.get('/api/user/:userID', async (req, res) => {
+  const { userID } = req.params;
+
+  try {
+    const userDoc = await db.collection('users').doc(userID).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(userDoc.data());
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    res.status(500).json({ message: 'Error fetching user data' });
+  }
+});
+
+// PUT - Update User Profile (Update)
+app.put('/api/user/:userID', async (req, res) => {
+  const { userID } = req.params;
+  const { name, surname, age, idNumber, photo, role } = req.body;
+
+  try {
+    const userRef = db.collection('users').doc(userID);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const updatedData = {
+      name,
+      surname,
+      age: parseInt(age, 10),
+      idNumber,
+      photo,
+      role,
+    };
+
+    await userRef.update(updatedData);
+
+    res.status(200).json({ message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Error updating profile' });
+  }
+});
+// DELETE - Remove User (Delete)
+app.delete('/api/user/:userID', async (req, res) => {
+  const { userID } = req.params;
+
+  try {
+    // Delete user from Firebase Authentication
+    await admin.auth().deleteUser(userID);
+
+    // Remove user data from Firestore
+    await db.collection('users').doc(userID).delete();
+
+    res.status(200).json({ message: 'User removed successfully' });
+  } catch (error) {
+    console.error('Error removing user:', error);
+    res.status(500).json({ message: 'Error removing user' });
+  }
+});
+
 
 // Start Server
 const PORT = process.env.PORT || 5000;

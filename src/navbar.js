@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for redirection
 import { auth, db } from './firebase'; // Firebase imports
 import { doc, getDoc } from 'firebase/firestore'; // Firestore imports
 import { signOut } from 'firebase/auth';  // Firebase sign out function
-import './navbar.css'
+import { toast } from 'react-toastify'; // For toast notifications
+import './navbar.css';
+
 const Navbar = () => {
   const [role, setRole] = useState(null);  // State to hold user role
   const [name, setName] = useState(null);  // State to hold user name
   const [photo, setPhoto] = useState(null);  // State to hold user profile photo
   const [loading, setLoading] = useState(true);  // State to handle loading state
+  const [dropdownVisible, setDropdownVisible] = useState(false);  // State to control dropdown visibility
   const navigate = useNavigate(); // Initialize useNavigate for conditional redirects
 
-  // Function to handle user logout
+  const defaultAvatar = '/path/to/default-avatar.png';  // Define a path for a default avatar image
+
   const handleLogout = async () => {
     try {
       await signOut(auth); // Firebase sign out function
@@ -21,79 +25,82 @@ const Navbar = () => {
     }
   };
 
+  const handleProfileClick = useCallback(() => {
+    setDropdownVisible(prevState => !prevState);  // Toggle the dropdown visibility
+  }, []);
+
   useEffect(() => {
-    // Function to fetch user details from Firestore
     const fetchUserDetails = async () => {
-      const user = auth.currentUser; // Get the currently authenticated user
+      const user = auth.currentUser;
       if (user) {
         try {
-          
-          // Fetch user details from Firestore using user.uid
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           const userData = userDoc.data();
-          console.log(userData);
-          
-          
-          // Set role, name, and profile photo in state
           setRole(userData?.role);
-          setName(`${userData?.name} ${userData?.surname}`);  // Combine name and surname
-          setPhoto(userData?.photo);  // Set the profile photo URL (base64 or Firebase URL)
+          setName(`${userData?.name} ${userData?.surname}`);
+          setPhoto(userData?.photo);
         } catch (error) {
-          console.error("Error fetching user details:", error);
-          navigate('/login');  // Redirect to login if there's an error
+          toast.error('Failed to fetch user details. Please log in again.');
+          navigate('/login');
         }
       } else {
-        navigate('/login'); // Redirect to login if no user is authenticated
+        navigate('/login');
       }
-      setLoading(false); // Set loading to false after the details are fetched or if there's an error
+      setLoading(false);
     };
 
-    fetchUserDetails(); // Call the function to fetch the details when the component loads
-  }, [navigate]); // Only re-run the effect when the navigate function changes
+    fetchUserDetails();
+  }, [navigate]);
 
   if (loading) {
-    return <div>Loading...</div>;  // Show loading indicator while the user role and name are being fetched
+    return <div className="loading-indicator">Loading...</div>;  // You can add a spinner or progress bar here
   }
+
+  const roleBasedLinks = {
+    'general-admin': [
+      { to: '/dashboard', label: 'General Admin Dashboard' },
+      { to: '/employees', label: 'Employee Management' },
+    ],
+    'super-admin': [
+      { to: '/super-admin-dashboard', label: 'Super Admin Dashboard' },
+      { to: '/assign-admin', label: 'Assign Role' },
+      { to: '/employees', label: 'Employee Management' },
+    ],
+  };
+
+  const userLinks = roleBasedLinks[role] || [];
 
   return (
     <nav className="navbar">
       <ul>
-        {/* Conditionally render links based on user role */}
-        {role === 'general-admin' && (
-          <>
-            <li><Link to="/dashboard">General Admin Dashboard</Link></li>
-            <li><Link to="/employees">Employee Management</Link></li>
-          </>
-        )}
-
-        {role === 'super-admin' && (
-          <>
-            <li><Link to="/super-admin-dashboard">Super Admin Dashboard</Link></li>
-            <li><Link to="/assign-admin">Assign Role</Link></li>
-            <li><Link to="/employees">Employee Management</Link></li>
-          </>
-        )}
-
-        {/* Display the full name and profile photo */}
+        {userLinks.map((link) => (
+          <li key={link.to}>
+            <Link to={link.to}>{link.label}</Link>
+          </li>
+        ))}
         {auth.currentUser ? (
           <li className="user-info">
-            <div className="user-profile">
-              {photo ? (
-                <img
-                  src={photo}
-                  alt="Profile"
-                  className="profile-photo"
-                  style={{ width: "40px", height: "40px", borderRadius: "50%" }}  // Round profile photo
-                />
-              ) : (
-                <div className="default-avatar">👤</div>  // Placeholder if no photo is available
-              )}
+            <div className="user-profile" onClick={handleProfileClick}>
+              <img
+                src={photo || defaultAvatar}
+                alt="Profile"
+                className="profile-photo"
+                style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+              />
               <span className="user-name">{name}</span>
             </div>
-            <button onClick={handleLogout}>Logout</button>
+
+            {dropdownVisible && (
+              <div className="profile-dropdown">
+                <ul>
+                  <li><Link to="/profile">View Profile</Link></li>
+                  <li><button onClick={handleLogout}>Logout</button></li>
+                </ul>
+              </div>
+            )}
           </li>
         ) : (
-          <li><Link to="/login">Login</Link></li>  // Login link if user is not authenticated
+          <li><Link to="/login">Login</Link></li>
         )}
       </ul>
     </nav>

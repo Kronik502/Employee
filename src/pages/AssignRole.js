@@ -45,23 +45,27 @@ const AssignRole = () => {
     setIsSubmitting(true);
 
     try {
+      console.log('test');
+      
       // Step 1: Create the user in Firebase Auth
       const auth = getAuth();
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const uid =' userCredential.user.uid';
+      // const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // const uid =' userCredential.user.uid';
 
       // Step 2: Save the admin details (without email and password) in Firestore
-      const db = getFirestore();
+      // const db = getFirestore();
       const newAdminData = {
         name,
         surname,
+        email,
         age: parseInt(age, 10),
         idNumber,
         photo,
         role,
-        uid, // Include UID to link Firebase Auth with Firestore
+        password
+        // uid, // Include UID to link Firebase Auth with Firestore
       };
-      console.log(newAdminData);
+      // console.log(newAdminData);
       
 
       
@@ -70,17 +74,11 @@ const AssignRole = () => {
 
       // Step 3: Send the data to your backend API to assign the role (if needed)
       // const token = localStorage.getItem("idToken");  // Assuming the token is stored after authentication
-      // const response = await axios.post(
-      //   "http://localhost:5000/api/assign-general-admin", // Endpoint to assign role in the backend
-      //   newAdminData
-      //   // {
-      //   //   headers: {
-      //   //     Authorization: `Bearer ${token}`,  // Use token to authenticate the request
-      //   //   },
-      //   // }
-      // );
+      const response = await axios.post(
+        "http://localhost:5000/api/assign-general-admin", // Endpoint to assign role in the backend
+        newAdminData );
 
-      // toast.success(response.data.message); // Show success message
+      toast.success(response.data.message); // Show success message
       setIsSubmitting(false);
 
       // Clear the form after successful submission

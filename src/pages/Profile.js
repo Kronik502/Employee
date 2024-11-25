@@ -1,238 +1,213 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { toast } from "react-toastify";
-import { getAuth, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
-import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import { getAuth } from 'firebase/auth'; // Firebase Authentication
+import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore'; // Firestore for data fetch & update
+import './Profile.css'; // Assuming the CSS is in the same folder
 
 const Profile = () => {
   const [userData, setUserData] = useState({
-    name: "",
-    surname: "",
-    age: "",
-    idNumber: "",
-    photo: "",
-    email: "",
-    role: "",
+    name: '',
+    surname: '',
+    age: '',
+    idNumber: '',
+    photo: '',
+    email: '',
+    role: 'sysadmin',
   });
-  const [newPassword, setNewPassword] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const auth = getAuth();
   const db = getFirestore();
 
-  // Fetch user data when the component mounts
   useEffect(() => {
+    // Ensure the user is authenticated
+    const user = auth.currentUser;
+    if (!user) {
+      toast.error("Please log in to view your profile.");
+      return;
+    }
+
+    // Fetch user data from Firestore
     const fetchUserData = async () => {
       try {
-        const user = auth.currentUser;
-        if (!user) return toast.error("No user logged in.");
+        const docRef = doc(db, 'users', user.uid); // Use the UID from Firebase Authentication to get the correct user
+        const docSnap = await getDoc(docRef);
 
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setUserData(userDoc.data());
+        if (docSnap.exists()) {
+          setUserData(docSnap.data()); // Set the data if the user document exists
         } else {
-          toast.error("User data not found.");
+          toast.error("User data not found");
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
-        toast.error("Error fetching user data.");
+        toast.error("Failed to load user data");
       }
     };
 
     fetchUserData();
-  }, [auth.currentUser]);
+  }, [auth, db]);
 
-  // Handle profile update
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  const handleInputChange = (e) => {
+    const { id, value } = e.target;
+    setUserData({
+      ...userData,
+      [id]: value,
+    });
+  };
 
-    try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("User not authenticated.");
-
-      // Update user info in Firestore
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, userData);
-
-      // Optionally update Firebase Auth info (like email)
-      if (user.email !== userData.email) {
-        await updateEmail(user, userData.email);
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // Max file size is 5MB
+        toast.error("File size should be less than 5MB");
+        return;
       }
-
-      toast.success("Profile updated successfully.");
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast.error("Error updating profile.");
-    } finally {
-      setIsSubmitting(false);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUserData({
+          ...userData,
+          photo: reader.result, // Save Base64 encoded string
+        });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  // Handle password update
-  const handleUpdatePassword = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("User not authenticated.");
+    const user = auth.currentUser;
 
-      // Prompt for current password for reauthentication
-      const credential = EmailAuthProvider.credential(user.email, prompt("Please enter your current password"));
-      await reauthenticateWithCredential(user, credential);
-
-      // Update password
-      await updatePassword(user, newPassword);
-      toast.success("Password updated successfully.");
-    } catch (error) {
-      console.error("Error updating password:", error);
-      toast.error("Error updating password.");
-    } finally {
+    if (!user) {
+      toast.error("Please log in to update your profile.");
       setIsSubmitting(false);
+      return;
     }
-  };
 
-  // Handle user profile deletion
-  const handleDeleteProfile = async () => {
-    if (window.confirm("Are you sure you want to delete your profile? This action is irreversible.")) {
-      setIsSubmitting(true);
+    try {
+      // Update user data in Firestore
+      const docRef = doc(db, 'users', user.uid);
+      await updateDoc(docRef, userData);
 
-      try {
-        const user = auth.currentUser;
-        if (!user) throw new Error("User not authenticated.");
-
-        // Delete user data from Firestore
-        const userRef = doc(db, "users", user.uid);
-        await deleteDoc(userRef);
-
-        // Optionally, delete Firebase Auth account
-        await user.delete();
-
-        toast.success("Profile deleted successfully.");
-      } catch (error) {
-        console.error("Error deleting profile:", error);
-        toast.error("Error deleting profile.");
-      } finally {
-        setIsSubmitting(false);
-      }
+      toast.success('Profile updated successfully');
+      setIsEditing(false); // Exit edit mode after update
+    } catch (error) {
+      toast.error('Failed to update profile');
     }
+    setIsSubmitting(false);
   };
 
   return (
     <div className="profile-container">
-      <h2>User Profile</h2>
-
-      {/* Display Profile Information */}
-      <form onSubmit={handleUpdateProfile}>
-        <div>
-          <label htmlFor="name">Name</label>
-          <input
-            type="text"
-            id="name"
-            value={userData.name}
-            onChange={(e) => setUserData({ ...userData, name: e.target.value })}
-            required
+      <h2>Profile</h2>
+      <div className="profile-info">
+        <div className="profile-photo">
+          <img
+            src={userData.photo || 'https://via.placeholder.com/150'}
+            alt="Profile"
           />
+          {isEditing && (
+            <input
+              type="file"
+              id="photo"
+              onChange={handlePhotoChange}
+              accept="image/*"
+              className="file-input"
+            />
+          )}
         </div>
+        <div className="profile-fields">
+          <form onSubmit={handleSubmit}>
+            <div className="field">
+              <label>Name</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  id="name"
+                  value={userData.name}
+                  onChange={handleInputChange}
+                />
+              ) : (
+                <p>{userData.name}</p>
+              )}
+            </div>
 
-        <div>
-          <label htmlFor="surname">Surname</label>
-          <input
-            type="text"
-            id="surname"
-            value={userData.surname}
-            onChange={(e) => setUserData({ ...userData, surname: e.target.value })}
-            required
-          />
+            <div className="field">
+              <label>Surname</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  id="surname"
+                  value={userData.surname}
+                  onChange={handleInputChange}
+                />
+              ) : (
+                <p>{userData.surname}</p>
+              )}
+            </div>
+
+            <div className="field">
+              <label>Age</label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  id="age"
+                  value={userData.age}
+                  onChange={handleInputChange}
+                />
+              ) : (
+                <p>{userData.age}</p>
+              )}
+            </div>
+
+            <div className="field">
+              <label>ID Number</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  id="idNumber"
+                  value={userData.idNumber}
+                  onChange={handleInputChange}
+                />
+              ) : (
+                <p>{userData.idNumber}</p>
+              )}
+            </div>
+
+            <div className="field">
+              <label>Email</label>
+              {isEditing ? (
+                <input
+                  type="email"
+                  id="email"
+                  value={userData.email}
+                  onChange={handleInputChange}
+                />
+              ) : (
+                <p>{userData.email}</p>
+              )}
+            </div>
+
+           
+
+            {isEditing && (
+              <>
+                <button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Updating...' : 'Update Profile'}
+                </button>
+                <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
+              </>
+            )}
+
+            {!isEditing && (
+              <button type="button" onClick={() => setIsEditing(true)}>
+                Edit Profile
+              </button>
+            )}
+          </form>
         </div>
-
-        <div>
-          <label htmlFor="age">Age</label>
-          <input
-            type="number"
-            id="age"
-            value={userData.age}
-            onChange={(e) => setUserData({ ...userData, age: e.target.value })}
-            required
-            min="1"
-            max="150"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="idNumber">ID Number</label>
-          <input
-            type="text"
-            id="idNumber"
-            value={userData.idNumber}
-            onChange={(e) => setUserData({ ...userData, idNumber: e.target.value })}
-            required
-          />
-        </div>
-
-        <div>
-          <label htmlFor="photo">Photo</label>
-          <input
-            type="file"
-            id="photo"
-            onChange={(e) => setUserData({ ...userData, photo: URL.createObjectURL(e.target.files[0]) })}
-            accept="image/*"
-          />
-          {userData.photo && <img src={userData.photo} alt="Profile Preview" style={{ maxWidth: "100px", maxHeight: "100px" }} />}
-        </div>
-
-        <div>
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            value={userData.email}
-            onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-            required
-          />
-        </div>
-
-        <div>
-          <label htmlFor="role">Role</label>
-          <input
-            type="text"
-            id="role"
-            value={userData.role}
-            onChange={(e) => setUserData({ ...userData, role: e.target.value })}
-            required
-            disabled
-          />
-        </div>
-
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Updating..." : "Update Profile"}
-        </button>
-      </form>
-
-      {/* Password Update Form */}
-      <h3>Change Password</h3>
-      <form onSubmit={handleUpdatePassword}>
-        <div>
-          <label htmlFor="newPassword">New Password</label>
-          <input
-            type="password"
-            id="newPassword"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Updating..." : "Update Password"}
-        </button>
-      </form>
-
-      {/* Profile Deletion */}
-      <button onClick={handleDeleteProfile} disabled={isSubmitting}>
-        {isSubmitting ? "Deleting..." : "Delete Profile"}
-      </button>
+      </div>
     </div>
   );
 };
