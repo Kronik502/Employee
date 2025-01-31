@@ -36,15 +36,12 @@ Make sure you have the following installed:
    git clone <repository-url>
    cd employee-management-app
 Install the dependencies:
-
-bash
-Copy code
 npm install
-Start the development server:
 
-bash
-Copy code
+
+Start the development server:
 npm start
+
 This should start the application at http://localhost:3000.
 
 Backend Setup
