@@ -53,3 +53,8 @@ Click "Add Employee" to submit the details.
 To edit an employee, click the "Edit" button next to their details.
 To remove an employee, click the "Remove" button, and confirm the action in the modal.
 Use the search bar to find employees by their ID.
+
+
+screenshot:
+
+![Employees](https://github.com/user-attachments/assets/ed67dc7b-fcc2-438b-91b1-053ae8597c80)
